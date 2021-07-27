@@ -1,5 +1,7 @@
 # read file
 library(readxl)
+install.packages("extrafont")
+library(extrafont)
 library(dplyr)
 library(tidyr)
 library(survival)
@@ -131,8 +133,15 @@ snu_King_1 <- snu1 %>% group_by(ALSFRS_R) %>%
   filter(King==1)
 table(is.na(snu_King_1))
 result <- lm(ALSFRS_R~interval, data=snu_King_1,na.rm=T)
-ggplot(snu1,aes(interval,ALSFRS_R))+geom_line(aes(color=King))
- summary(result)
+snu1$interval <- as.numeric((snu1$interval))
+snu1$MiToS <- as.factor((snu1$MiToS))
+snu1$King <- as.factor((snu1$King))
+ggplot(snu1,aes(interval,ALSFRS_R))+geom_jitter(aes(color=King))+geom_smooth(method=lm,aes(color=King,fill=King))+ggtitle("ALSFRS-R trajectory based on King's staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5))
+ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R))+geom_jitter(aes(color=MiToS))+geom_smooth(method=lm,aes(color=MiToS,fill=MiToS))+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
+snu1$stage <- paste(snu$King,snu$MiToS)
+ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R))+geom_jitter(aes(color=stage))+geom_smooth(method=lm,aes(color=stage,fill=stage))+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
+ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R,color=King,shape=MiToS,group=interaction(King,MiToS)))+geom_jitter()+geom_smooth(method=lm)+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
+summary(result)
 par(mfrow=c(2,2))
 plot(result)
 install.packages("fmsb")
