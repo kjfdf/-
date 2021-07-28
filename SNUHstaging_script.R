@@ -24,7 +24,8 @@ snu$King <- snu$b_c_ls
 snu$King <- ifelse(snu$respi_insuf<4,"4b",ifelse(snu$cutting_gast<=4,"4a",as.character(snu$b_c_ls)))
 #King's system determine by excel and save result
 write_xlsx(snu,"snuh1.xlsx")
-snu1 <- read_xlsx("snuh1.xlsx")
+write_xlsx(snu,"snuh-.xlsx")
+snu1 <- read_xlsx("snuh2.xlsx")
 snu1$swallowing = ifelse(snu1$swallowing <= 1, 1, 0)
 snu1$breathing = ifelse(snu1$dyspnea<=1|snu1$respi_insuf <= 2, 1, 0)
 snu1$communicating = ifelse(snu1$speech <= 1 & snu1$handwriting <= 1, 
@@ -63,92 +64,60 @@ g
 snu$King <- as.factor(snu$King)
 snu$MiToS <- as.factor(snu$MiToS)
 range(snu$Date,na.rm=T)
+# fu duration (time from first to last alsfrs scores)  - histogram, summary statistics 
 snu$Date <- as.Date(snu$Date)
 snu$Date1 <- as.Date(snu$Date1)
 snu1 <- snu %>% 
   group_by(ID) %>% 
-  mutate(interval=last(Date)-first(Date))
+  mutate(interval=Date1-first(Date1))
+write_xlsx(snu1,"snuh_interval.xlsx")
 table(snu1$interval)
 snu1$interval <- as.numeric(snu1$interval)
 shapiro.test(snu1$interval)
 summary(snu1$interval)
 interval_plot <- ggplot(snu1,aes(x=interval))+
-  geom_histogram(binwidth=1,color="black",fill="gray")+
-  geom_vline(aes(xintercept=median(interval,na.rm=T)),color="black",linetype="dashed",size=1)+
+  geom_histogram(color="black",fill="gray")+
+  geom_vline(aes(xintercept=median(interval,na.rm=T)),color="blue",linetype="dashed",size=1)+
   ggtitle("Histogram of intervals")+
-  theme(plot.title=element_text(family="TT times newroman",face="bold",size="20",hjust=0.5,color="darkblue"))
+  theme(plot.title=element_text(family="TT times newroman",face="bold",size="10",hjust=0.5,color="darkblue"))+
+  coord_cartesian(xlim = c(0,max(snu1$interval)+10),ylim = c(0,500))+
+  annotate("text", x=200, y=500, label="median=91", size=5,color="blue")
 interval_plot
-snu_firstvisit <- snu %>% group_by(ID) %>% 
-  filter(Date==min(Date)) %>% 
-  summarise(first=first(Date),
-            ALSFRS_R,
-            King,
-            MiToS)
-summary(snu_firstvisit)
-snu_firstvisitstage <- snu_firstvisit %>% group_by(King,MiToS) %>% summarise(n=n())
-ggplot(snu_firstvisitstage,aes(King,MiToS,fill=MiToS))+geom_bar(stat='identity',position='dodge')
-# fu duration (time from first to last alsfrs scores)  - histogram, summary statistics 
-snu1 <- snu %>% group_by(ID) %>% mutate(interval=last(Date1)-first(Date1))
-snu_fualsfrs <- snu %>% group_by(ID) %>% 
-  filter(Date%in%c(min(Date),max(Date))) %>% 
-  summarise(ALSFRS_R,
-            King,
-            MiToS,
-            Date)
-summary(snu_fualsfrs)
-snu_fualsfrs_first <- snu %>% group_by(ID) %>% 
-  filter(Date==min(Date)) %>% 
-  summarise(ALSFRS_R,
-            King,
-            MiToS,
-            Date) 
-snu_fualsfrs_first$group <- as.factor("first visit")
-summary(snu_fualsfrs_first)
-snu_fualsfrs_last <- snu %>% group_by(ID) %>% 
-  filter(Date==max(Date)) %>% 
-  summarise(ALSFRS_R,
-            King,
-            MiToS,
-            Date)
-snu_fualsfrs_last$group <- as.factor("last visit")
-summary(snu_fualsfrs_last)
-snu_fualsfrsgroup <- rbind(snu_fualsfrs_first,snu_fualsfrs_last)
-library(plyr)
-mu <- ddply(snu_fualsfrsgroup,"group",summarise,grp.mean=mean(ALSFRS_R))
-ggplot(snu_fualsfrsgroup,aes(x=ALSFRS_R,fill=group,color=group))+
-  geom_histogram(aes(y=..density..),alpha=0.5,position="identity")+
-  geom_density(alpha=0.3)+
-  geom_vline(data=mu, aes(xintercept=grp.mean,color=group),
-             linetype="dashed",size=1)+
-  theme(legend.position="top")+
-  theme_minimal()+
-  ggtitle("Distribution of ALSFRS-R at first and last visits")
 # progression of alsfrs total scores over time - line plot, linear regression - comparisons between groups categorized based on the entry stage   
-King_ <- list(0,2,3,"4a","4b")
-MiToS_ <- list(0,1,2,3,4)
-for(i in 1:5){
-  f <- as.formula(paste0)
-}
-snu_King_1 <- snu1 %>% group_by(ALSFRS_R) %>% 
-  filter(King==1)
-table(is.na(snu_King_1))
-result <- lm(ALSFRS_R~interval, data=snu_King_1,na.rm=T)
-snu1$interval <- as.numeric((snu1$interval))
-snu1$MiToS <- as.factor((snu1$MiToS))
-snu1$King <- as.factor((snu1$King))
-ggplot(snu1,aes(interval,ALSFRS_R))+geom_jitter(aes(color=King))+geom_smooth(method=lm,aes(color=King,fill=King))+ggtitle("ALSFRS-R trajectory based on King's staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5))
-ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R))+geom_jitter(aes(color=MiToS))+geom_smooth(method=lm,aes(color=MiToS,fill=MiToS))+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
-snu1$stage <- paste(snu$King,snu$MiToS)
-ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R))+geom_jitter(aes(color=stage))+geom_smooth(method=lm,aes(color=stage,fill=stage))+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
-ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R,color=King,shape=MiToS,group=interaction(King,MiToS)))+geom_jitter()+geom_smooth(method=lm)+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
-summary(result)
-par(mfrow=c(2,2))
-plot(result)
-install.packages("fmsb")
-library(fmsb)
-VIF(result) #다중공선성 확인. VIF>5 면 다중공선성 존재, 10보다 크면 심한 다중공선성
-sqrt(VIF(result))
-influencePlot(fit,id.method="identify")
+snu3$MiToS_entry <- as.factor((snu3$MiToS_entry))
+snu3$King_entry <- as.factor((snu3$King_entry))
+snu2 <- snu1 %>% group_by(ID) %>% filter(Date1==min(Date1))
+snu2 <- snu2 %>% mutate(King_entry=King,MiToS_entry=MiToS)
+snu2 <- snu2 %>% select(ID,King_entry,MiToS_entry)
+snu3 <- merge(x=snu1,y=snu2,by="ID",all.x=T)
+write_xlsx(snu3,"snuh_entrystage.xlsx")
+# initial King stage에 따른 ALSFRS 변화 plot
+ggplot(snu3,aes(interval,ALSFRS_R))+geom_jitter(aes(color=King_entry))+geom_smooth(method=lm,aes(color=King_entry,fill=King_entry))+ggtitle("ALSFRS-R trajectory based on initial King's staging")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5))
+# initial MiToS stage에 따른 ALSFRS 변화 plot
+ggplot(data=subset(snu3,!is.na(MiToS_entry)),aes(interval,ALSFRS_R))+geom_jitter(aes(color=MiToS_entry))+geom_smooth(method=lm,aes(color=MiToS_entry,fill=MiToS_entry))+ggtitle("ALSFRS-R trajectory based on initial MiToS staging")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
+# snu1$stage <- paste(snu$King,snu$MiToS)
+# ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R))+geom_jitter(aes(color=stage))+geom_smooth(method=lm,aes(color=stage,fill=stage))+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
+# ggplot(data=subset(snu1,!is.na(MiToS)),aes(interval,ALSFRS_R,color=King,shape=MiToS,group=interaction(King,MiToS)))+geom_jitter()+geom_smooth(method=lm)+ggtitle("ALSFRS-R trajectory based on MiToS staging system")+theme(plot.title = element_text(face="bold",size=15,hjust=0.5)) #116 elements of NA removed
 # KM curves for time to any progression in stage (King's vs. MiToS) 
+snu3$King <- as.numeric(snu3$King)
+snu3$MiToS <- as.numeric(snu3$MiToS)
+snu4 <- snu3 %>% group_by(ID) %>% 
+  mutate(prog_K=King-lag(King,default=King[1]),
+         prog_M=MiToS-lag(MiToS,default=MiToS[1]),
+         prog_K1=ifelse(prog_K==1,1,0),
+         prog_M1=ifelse(prog_M==1,1,0),
+         prog_K2=ifelse(prog_K==2,1,0),
+         prog_M2=ifelse(prog_M==2,1,0))
+snu4$King <- as.factor(snu4$King)
+snu4$MiToS <- as.factor(snu4$MiToS)
+snu4$King <- ifelse(snu4$King==5,"4a",ifelse(snu4$King==6,"4b",snu4$King))
+write_xlsx(snu4,"snuh_progress.xlsx")
+library(survival)
+install.packages("survminer")
+library(survminer)
+snu4$ts <- Surv(snu4$interval,snu4$prog_K1==1) #1이면 King stage가 1이상 증가, interval은 entry부터 f/u까지의 duration
+fit <- survfit(ts~King_entry,data=snu4)
+ggsurvplot(fit, legend.title="King's staging at entry",legend.labs=c("King's stage 0","King's stage 2","King's stage 3","King's stage 4a","King's stage 4b"),
+           conf.int=T,pval=T,surv.median.line="hv",risk.table=T,fun="event")
 # KM curves for time to >= 2 stage progression (King's vs. MiToS) 
 # Concordance between King's and MiToS stage progression (>= 1 stage, >= 2 stage) 
